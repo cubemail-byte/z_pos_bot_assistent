@@ -4,6 +4,7 @@ import os
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
+from aiogram.filters import Command
 from aiogram.types import Message
 from dotenv import load_dotenv
 
@@ -22,6 +23,10 @@ async def main() -> None:
     async def start(message: Message):
         await message.answer("Привет! Я жив. Напиши что-нибудь — я повторю 🙂")
 
+    @dp.message(Command("ping"))
+    async def ping(message: Message):
+        await message.answer("pong")
+    
     @dp.message(F.text)
     async def echo(message: Message):
         await message.answer(message.text)

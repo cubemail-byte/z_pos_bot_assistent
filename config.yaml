@@ -1,0 +1,6 @@
+﻿app:
+  name: tg-agent
+  log_level: INFO
+
+bot:
+  echo_enabled: true

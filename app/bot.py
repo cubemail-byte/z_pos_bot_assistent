@@ -10,11 +10,11 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 from dotenv import load_dotenv
 
-from app.storage import init_db, save_message
+from storage import init_db, save_message  # <- ВАЖНО: локальный импорт из app/storage.py
 
 
-def load_config() -> dict:
-    config_path = Path(__file__).resolve().parent.parent / "config.yaml"
+def load_config(project_root: Path) -> dict:
+    config_path = project_root / "config.yaml"
     return yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
 
 
@@ -24,8 +24,15 @@ async def main() -> None:
     if not token:
         raise RuntimeError("BOT_TOKEN is not set (put it into /opt/tg-agent/.env)")
 
-    cfg = load_config()
-    sqlite_path = cfg.get("storage", {}).get("sqlite_path", "data/agent.db")
+    project_root = Path(__file__).resolve().parent.parent  # .../app/bot.py -> .../
+    cfg = load_config(project_root)
+
+    sqlite_path_cfg = cfg.get("storage", {}).get("sqlite_path", "data/agent.db")
+    sqlite_path = Path(sqlite_path_cfg)
+    if not sqlite_path.is_absolute():
+        sqlite_path = project_root / sqlite_path  # всегда относительно корня проекта
+    sqlite_path = str(sqlite_path)
+
     reply_in_groups = bool(cfg.get("bot", {}).get("reply_in_groups", False))
 
     init_db(sqlite_path)
@@ -38,7 +45,6 @@ async def main() -> None:
 
     @dp.message(CommandStart())
     async def start(message: Message):
-        # В личке можно отвечать, в группах — по настройке
         if message.chat.type in ("group", "supergroup") and not reply_in_groups:
             return
         await message.answer("Привет! Я жив. Команда: /ping")
@@ -65,11 +71,9 @@ async def main() -> None:
 
         log.info("saved message chat_id=%s msg_len=%s", message.chat.id, len(message.text or ""))
 
-        # В группах молчим, если не разрешено
         if message.chat.type in ("group", "supergroup") and not reply_in_groups:
             return
 
-        # В личке (и если разрешено в группах) — эхо как раньше
         await message.answer(message.text)
 
     await dp.start_polling(bot)

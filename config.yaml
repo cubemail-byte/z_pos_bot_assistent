@@ -2,5 +2,9 @@
   name: tg-agent
   log_level: INFO
 
+storage:
+  sqlite_path: data/agent.db
+
 bot:
   echo_enabled: true
+  reply_in_groups: false

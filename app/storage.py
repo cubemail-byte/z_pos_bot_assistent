@@ -55,6 +55,7 @@ def save_message_raw(db_path: str, m: Mapping[str, Any]) -> None:
               ts_utc, chat_id, chat_type, from_id, username, text,
               chat_alias,
               tg_message_id, reply_to_tg_message_id,
+              reply_to_from_id, reply_to_username,
               from_display,
               forward_from_id, forward_from_name,
               content_type, has_media, service_action,
@@ -63,6 +64,7 @@ def save_message_raw(db_path: str, m: Mapping[str, Any]) -> None:
             )
             VALUES (?, ?, ?, ?, ?, ?,
                     ?,
+                    ?, ?,
                     ?, ?,
                     ?,
                     ?, ?,
@@ -82,6 +84,9 @@ def save_message_raw(db_path: str, m: Mapping[str, Any]) -> None:
 
                 m.get("tg_message_id"),
                 m.get("reply_to_tg_message_id"),
+
+                m.get("reply_to_from_id"),
+                m.get("reply_to_username"),
 
                 m.get("from_display"),
 

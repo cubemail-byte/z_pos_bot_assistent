@@ -100,6 +100,13 @@ async def main() -> None:
             else None
         )
 
+        reply_to_from_id = None
+        reply_to_username = None
+        if message.reply_to_message and message.reply_to_message.from_user:
+            reply_to_from_id = message.reply_to_message.from_user.id
+            reply_to_username = message.reply_to_message.from_user.username
+
+
         # --- NEW: text может быть в caption (фото/док с подписью) ---
         text = message.text or message.caption or ""
 
@@ -183,6 +190,9 @@ async def main() -> None:
 
                 "tg_message_id": message.message_id,
                 "reply_to_tg_message_id": reply_to_tg_message_id,
+
+                "reply_to_from_id": reply_to_from_id,
+                "reply_to_username": reply_to_username,
 
                 "content_type": content_type,
                 "has_media": has_media,

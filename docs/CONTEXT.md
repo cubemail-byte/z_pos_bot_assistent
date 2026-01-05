@@ -1,31 +1,64 @@
-# tg-agent — CONTEXT
+# tg-agent — КОНТЕКСТ ПРОЕКТА
 
-## What this project is
-Telegram bot for collecting messages from a group chat about POS/terminal incidents.
-Goal: silently ingest all messages into DB (raw), then parse/classify later.
+## Что это за проект
+Telegram-бот для работы в групповом чате с клиентом (POS / терминалы).
+Задача бота — **тихо собирать все сообщения** в базу данных для последующего анализа
+(типовые проблемы, эскалации, скорость реакции, SLA и т.д.).
 
-## Current state (as of YYYY-MM-DD)
-- Bot runs on VPS (Ubuntu 24.04) under systemd service `tg-agent`.
-- Deployment: pull from GitHub + install deps + restart via `/usr/local/bin/tg-agent-deploy`.
-- Config:
-  - `config.yaml` in repo (non-secret settings)
-  - `.env` on VPS only (secrets like BOT_TOKEN)
-- Storage:
-  - SQLite DB: `/opt/tg-agent/data/agent.db`
-  - Table: `messages` (raw ingestion only)
+Бот **не участвует в диалоге** и не мешает чату.
 
-## Repo layout
-- `app/bot.py` — aiogram bot entrypoint
-- `app/storage.py` — sqlite helpers (init_db, save_message)
-- `config.yaml` — settings (no secrets)
+---
+
+## Текущее состояние (актуально на YYYY-MM-DD)
+- Бот запущен на VPS (Ubuntu 24.04) под systemd (`tg-agent.service`)
+- Используется `aiogram`
+- Деплой через `git pull + restart` (`tg-agent-deploy`)
+- Конфигурация:
+  - `.env` — только на VPS (секреты)
+  - `config.yaml` — в репозитории (параметры работы)
+- Хранилище:
+  - SQLite
+  - Файл БД: `/opt/tg-agent/data/agent.db`
+  - Таблица `messages` — сырые сообщения без обработки
+
+---
+
+## Что бот делает сейчас
+- Подключается к Telegram
+- Получает **все текстовые сообщения**
+- Сохраняет их в БД (raw ingestion)
+- Команды (`/ping`, `/start`) — только для технической проверки
+
+---
+
+## Что бот НЕ делает (принципиально)
+- Не парсит сообщения
+- Не классифицирует проблемы
+- Не отвечает в группах
+- Не использует LLM / ИИ
+- Не анализирует SLA
+
+---
+
+## Структура репозитория
+- `app/bot.py` — точка входа, обработка сообщений
+- `app/storage.py` — работа с SQLite
+- `config.yaml` — параметры работы бота (без секретов)
+- `.env` — секреты (на VPS, в git не хранится)
 - `requirements.txt`
+- `docs/` — документация и контекст проекта
 
-## Non-goals (for now)
-- No parsing / LLM / classification in ingestion step
-- No replying in groups (silent mode)
+---
 
-## Next milestones
-1) Silent mode hardening (commands only in private or admin-only)
-2) Admin commands: /stats, /last, /export
-3) Parsing pipeline: messages -> parsed_events (separate table)
-4) Threading / SLA / “was there a response?” logic
+## Ближайшие шаги (план)
+1. Зафиксировать режим «тихого» бота в группах
+2. Добавить базовые админ-команды (статистика, проверка)
+3. Ввести слой парсинга сообщений
+4. Разделить raw-сообщения и результаты анализа
+5. Анализ эскалаций и реакции
+
+---
+
+## Ключевой принцип
+**Сначала собираем данные, потом думаем, как их анализировать.**
+Raw-данные — источник истины.

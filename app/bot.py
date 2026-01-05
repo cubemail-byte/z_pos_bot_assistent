@@ -127,20 +127,45 @@ async def main() -> None:
         forward_from_id = None
         forward_from_name = None
 
-        # forward_from (пользователь)
-        fwd_user = getattr(message, "forward_from", None)
-        if fwd_user:
-            forward_from_id = getattr(fwd_user, "id", None)
-            fn = getattr(fwd_user, "first_name", None) or ""
-            ln = getattr(fwd_user, "last_name", None) or ""
-            un = getattr(fwd_user, "username", None) or ""
-            forward_from_name = (fn + " " + ln).strip() or un or None
+        origin = getattr(message, "forward_origin", None)
+        if origin:
+            # В Bot API forward_origin бывает разных типов (user/chat/hidden_user/channel и т.п.)
+            # aiogram даёт объект с полями, зависящими от типа. Пробуем аккуратно.
+            # 1) Если это forward от пользователя
+            user = getattr(origin, "sender_user", None)
+            if user:
+                forward_from_id = getattr(user, "id", None)
+                fn = getattr(user, "first_name", None) or ""
+                ln = getattr(user, "last_name", None) or ""
+                un = getattr(user, "username", None) or ""
+                forward_from_name = (fn + " " + ln).strip() or un or None
 
-        # forward_from_chat (канал/чат)
-        fwd_chat = getattr(message, "forward_from_chat", None)
-        if fwd_chat and not forward_from_name:
-            forward_from_id = getattr(fwd_chat, "id", None)
-            forward_from_name = getattr(fwd_chat, "title", None) or getattr(fwd_chat, "username", None) or None
+            # 2) Если это forward из чата/канала
+            chat = getattr(origin, "sender_chat", None)
+            if chat and not forward_from_name:
+                forward_from_id = getattr(chat, "id", None)
+                forward_from_name = getattr(chat, "title", None) or getattr(chat, "username", None) or None
+
+            # 3) Если это скрытый пользователь (hidden user)
+            hidden = getattr(origin, "sender_user_name", None)
+            if hidden and not forward_from_name:
+                forward_from_name = hidden
+
+        # Fallback для старых/особых случаев
+        if not forward_from_name:
+            fwd_user = getattr(message, "forward_from", None)
+            if fwd_user:
+                forward_from_id = getattr(fwd_user, "id", None)
+                fn = getattr(fwd_user, "first_name", None) or ""
+                ln = getattr(fwd_user, "last_name", None) or ""
+                un = getattr(fwd_user, "username", None) or ""
+                forward_from_name = (fn + " " + ln).strip() or un or None
+
+        if not forward_from_name:
+            fwd_chat = getattr(message, "forward_from_chat", None)
+            if fwd_chat:
+                forward_from_id = getattr(fwd_chat, "id", None)
+                forward_from_name = getattr(fwd_chat, "title", None) or getattr(fwd_chat, "username", None) or None
 
         save_message_raw(
             db_path=sqlite_path,

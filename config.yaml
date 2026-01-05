@@ -8,3 +8,9 @@ storage:
 bot:
   echo_enabled: true
   reply_in_groups: false
+
+chats:
+  - chat_id: -5275351843
+    alias: tatneft_escalation
+  - chat_id: -1234567890
+    alias: second_escalation

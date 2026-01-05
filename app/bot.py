@@ -5,17 +5,38 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
+import json
+
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 from dotenv import load_dotenv
 
-from storage import init_db, save_message  # <- ВАЖНО: локальный импорт из app/storage.py
+from storage import init_db, save_message, save_message_raw  # <- ВАЖНО: локальный импорт из app/storage.py
 
 
 def load_config(project_root: Path) -> dict:
     config_path = project_root / "config.yaml"
     return yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+
+def chat_alias_for(chat_id: int, cfg: dict) -> str | None:
+    for c in cfg.get("chats", []):
+        try:
+            if int(c.get("chat_id")) == int(chat_id):
+                return c.get("alias")
+        except Exception:
+            continue
+    return None
+
+def message_to_raw_json(message: Message) -> str:
+    try:
+        data = message.model_dump()
+    except Exception:
+        try:
+            data = message.to_python()
+        except Exception:
+            data = {"repr": repr(message)}
+    return json.dumps(data, ensure_ascii=False)
 
 
 async def main() -> None:
@@ -55,26 +76,71 @@ async def main() -> None:
             return
         await message.answer("pong")
 
-    @dp.message(F.text)
-    async def on_text(message: Message):
-        ts_utc = datetime.now(timezone.utc).isoformat()
+@dp.message(F.text)
+async def on_text(message: Message):
+    ts_utc = datetime.now(timezone.utc).isoformat()
 
-        save_message(
-            db_path=sqlite_path,
-            ts_utc=ts_utc,
-            chat_id=message.chat.id,
-            chat_type=message.chat.type,
-            from_id=message.from_user.id if message.from_user else None,
-            username=message.from_user.username if message.from_user else None,
-            text=message.text,
-        )
+    chat_id = message.chat.id
+    alias = chat_alias_for(chat_id, cfg)
 
-        log.info("saved message chat_id=%s msg_len=%s", message.chat.id, len(message.text or ""))
+    from_id = message.from_user.id if message.from_user else None
+    username = message.from_user.username if message.from_user else None
 
-        if message.chat.type in ("group", "supergroup") and not reply_in_groups:
-            return
+    from_display = None
+    if message.from_user:
+        first = (message.from_user.first_name or "").strip()
+        last = (message.from_user.last_name or "").strip()
+        from_display = (first + " " + last).strip() or None
 
-        await message.answer(message.text)
+    reply_to_tg_message_id = (
+        message.reply_to_message.message_id
+        if message.reply_to_message
+        else None
+    )
+
+    save_message_raw(
+        db_path=sqlite_path,
+        m={
+            "ts_utc": ts_utc,
+            "chat_id": chat_id,
+            "chat_type": message.chat.type,
+            "chat_alias": alias,
+
+            "from_id": from_id,
+            "username": username,
+            "from_display": from_display,
+
+            "text": message.text,
+
+            "tg_message_id": message.message_id,
+            "reply_to_tg_message_id": reply_to_tg_message_id,
+
+            "content_type": "text",
+            "has_media": 0,
+
+            "edited_ts_utc": (
+                message.edit_date.astimezone(timezone.utc).isoformat()
+                if message.edit_date
+                else None
+            ),
+
+            "raw_json": message_to_raw_json(message),
+        },
+    )
+
+    log.info(
+        "saved raw message chat_id=%s tg_message_id=%s alias=%s",
+        chat_id,
+        message.message_id,
+        alias,
+    )
+
+    if message.chat.type in ("group", "supergroup") and not reply_in_groups:
+        return
+
+    await message.answer(message.text)
+
+
 
     await dp.start_polling(bot)
 

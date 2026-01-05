@@ -76,71 +76,69 @@ async def main() -> None:
             return
         await message.answer("pong")
 
-@dp.message(F.text)
-async def on_text(message: Message):
-    ts_utc = datetime.now(timezone.utc).isoformat()
+    @dp.message(F.text)
+    async def on_text(message: Message):
+        ts_utc = datetime.now(timezone.utc).isoformat()
 
-    chat_id = message.chat.id
-    alias = chat_alias_for(chat_id, cfg)
+        chat_id = message.chat.id
+        alias = chat_alias_for(chat_id, cfg)
 
-    from_id = message.from_user.id if message.from_user else None
-    username = message.from_user.username if message.from_user else None
+        from_id = message.from_user.id if message.from_user else None
+        username = message.from_user.username if message.from_user else None
 
-    from_display = None
-    if message.from_user:
-        first = (message.from_user.first_name or "").strip()
-        last = (message.from_user.last_name or "").strip()
-        from_display = (first + " " + last).strip() or None
+        from_display = None
+        if message.from_user:
+            first = (message.from_user.first_name or "").strip()
+            last = (message.from_user.last_name or "").strip()
+            from_display = (first + " " + last).strip() or None
 
-    reply_to_tg_message_id = (
-        message.reply_to_message.message_id
-        if message.reply_to_message
-        else None
-    )
+        reply_to_tg_message_id = (
+            message.reply_to_message.message_id
+            if message.reply_to_message
+            else None
+        )
 
-    save_message_raw(
-        db_path=sqlite_path,
-        m={
-            "ts_utc": ts_utc,
-            "chat_id": chat_id,
-            "chat_type": message.chat.type,
-            "chat_alias": alias,
+        save_message_raw(
+            db_path=sqlite_path,
+            m={
+                "ts_utc": ts_utc,
+                "chat_id": chat_id,
+                "chat_type": message.chat.type,
+                "chat_alias": alias,
 
-            "from_id": from_id,
-            "username": username,
-            "from_display": from_display,
+                "from_id": from_id,
+                "username": username,
+                "from_display": from_display,
 
-            "text": message.text,
+                "text": message.text,
 
-            "tg_message_id": message.message_id,
-            "reply_to_tg_message_id": reply_to_tg_message_id,
+                "tg_message_id": message.message_id,
+                "reply_to_tg_message_id": reply_to_tg_message_id,
 
-            "content_type": "text",
-            "has_media": 0,
+                "content_type": "text",
+                "has_media": 0,
 
-            "edited_ts_utc": (
-                message.edit_date.astimezone(timezone.utc).isoformat()
-                if message.edit_date
-                else None
-            ),
+                "edited_ts_utc": (
+                    message.edit_date.astimezone(timezone.utc).isoformat()
+                    if message.edit_date
+                    else None
+                ),
 
-            "raw_json": message_to_raw_json(message),
-        },
-    )
+                "raw_json": message_to_raw_json(message),
+            },
+        )
 
-    log.info(
-        "saved raw message chat_id=%s tg_message_id=%s alias=%s",
-        chat_id,
-        message.message_id,
-        alias,
-    )
+        log.info(
+            "saved raw message chat_id=%s tg_message_id=%s alias=%s",
+            chat_id,
+            message.message_id,
+            alias,
+        )
 
-    if message.chat.type in ("group", "supergroup") and not reply_in_groups:
-        return
-
-    await message.answer(message.text)
-
-
+        if message.chat.type in ("group", "supergroup") and not reply_in_groups:
+            return
+        
+        await message.answer(message.text)
 
     await dp.start_polling(bot)
 

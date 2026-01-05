@@ -14,7 +14,6 @@ from dotenv import load_dotenv
 
 from storage import init_db, save_message, save_message_raw  # <- ВАЖНО: локальный импорт из app/storage.py
 
-
 def load_config(project_root: Path) -> dict:
     config_path = project_root / "config.yaml"
     return yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
@@ -76,8 +75,8 @@ async def main() -> None:
             return
         await message.answer("pong")
 
-    @dp.message(F.text)
-    async def on_text(message: Message):
+    @dp.message()
+    async def on_message(message: Message):
         ts_utc = datetime.now(timezone.utc).isoformat()
 
         chat_id = message.chat.id
@@ -98,6 +97,30 @@ async def main() -> None:
             else None
         )
 
+        # --- NEW: text может быть в caption (фото/док с подписью) ---
+        text = message.text or message.caption or ""
+
+        # --- NEW: content_type + has_media без сохранения контента ---
+        content_type = getattr(message, "content_type", None) or "other"
+        has_media = 1 if content_type in {
+            "photo", "video", "document", "audio", "voice", "video_note", "animation", "sticker"
+        } else 0
+
+        # --- NEW: service events ---
+        service_action = None
+        if getattr(message, "new_chat_members", None):
+            content_type = "service"
+            has_media = 0
+            service_action = "new_chat_members"
+        elif getattr(message, "left_chat_member", None):
+            content_type = "service"
+            has_media = 0
+            service_action = "left_chat_member"
+        elif getattr(message, "pinned_message", None):
+            content_type = "service"
+            has_media = 0
+            service_action = "pinned_message"
+
         save_message_raw(
             db_path=sqlite_path,
             m={
@@ -110,13 +133,14 @@ async def main() -> None:
                 "username": username,
                 "from_display": from_display,
 
-                "text": message.text,
+                "text": text,
 
                 "tg_message_id": message.message_id,
                 "reply_to_tg_message_id": reply_to_tg_message_id,
 
-                "content_type": "text",
-                "has_media": 0,
+                "content_type": content_type,
+                "has_media": has_media,
+                "service_action": service_action,
 
                 "edited_ts_utc": (
                     message.edit_date.astimezone(timezone.utc).isoformat()
@@ -129,16 +153,21 @@ async def main() -> None:
         )
 
         log.info(
-            "saved raw message chat_id=%s tg_message_id=%s alias=%s",
+            "saved raw message chat_id=%s tg_message_id=%s alias=%s content_type=%s has_media=%s",
             chat_id,
             message.message_id,
             alias,
+            content_type,
+            has_media,
         )
 
+        # тихий режим в группах
         if message.chat.type in ("group", "supergroup") and not reply_in_groups:
             return
-        
-        await message.answer(message.text)
+
+        # В личке эхо оставляем. В группе до этой строки не дойдём из-за return выше.
+        await message.answer(text)
+
 
     await dp.start_polling(bot)
 

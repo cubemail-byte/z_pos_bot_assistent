@@ -75,6 +75,9 @@ async def main() -> None:
             return
         await message.answer("pong")
 
+# ---------------------------------
+# on_message ----------------------
+
     @dp.message()
     async def on_message(message: Message):
         ts_utc = datetime.now(timezone.utc).isoformat()
@@ -121,6 +124,24 @@ async def main() -> None:
             has_media = 0
             service_action = "pinned_message"
 
+        forward_from_id = None
+        forward_from_name = None
+
+        # forward_from (пользователь)
+        fwd_user = getattr(message, "forward_from", None)
+        if fwd_user:
+            forward_from_id = getattr(fwd_user, "id", None)
+            fn = getattr(fwd_user, "first_name", None) or ""
+            ln = getattr(fwd_user, "last_name", None) or ""
+            un = getattr(fwd_user, "username", None) or ""
+            forward_from_name = (fn + " " + ln).strip() or un or None
+
+        # forward_from_chat (канал/чат)
+        fwd_chat = getattr(message, "forward_from_chat", None)
+        if fwd_chat and not forward_from_name:
+            forward_from_id = getattr(fwd_chat, "id", None)
+            forward_from_name = getattr(fwd_chat, "title", None) or getattr(fwd_chat, "username", None) or None
+
         save_message_raw(
             db_path=sqlite_path,
             m={
@@ -147,6 +168,9 @@ async def main() -> None:
                     if message.edit_date
                     else None
                 ),
+
+                "forward_from_id": forward_from_id,
+                "forward_from_name": forward_from_name,
 
                 "raw_json": message_to_raw_json(message),
             },

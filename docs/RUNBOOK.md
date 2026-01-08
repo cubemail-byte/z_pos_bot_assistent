@@ -11,3 +11,5 @@ On VPS (root):
 ## DB checks
 - `sqlite3 /opt/tg-agent/data/agent.db "select count(*) from messages;"`
 - `sqlite3 /opt/tg-agent/data/agent.db "select id, ts_utc, chat_id, chat_type, username, substr(text,1,60) from messages order by id desc limit 20;"`
+
+

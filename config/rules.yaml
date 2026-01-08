@@ -1,0 +1,72 @@
+ruleset_version: "1"
+description: "Rules for classifying escalation chat messages (keyword/regex, no AI)."
+
+problem_taxonomy:
+  other_code: OTHER
+  multi_label: true
+
+  # v1: taxonomy is the list of allowed problem codes
+  codes:
+    NO_LINK_TO_ECR: "Проблема связи/сопряжения POS ↔ касса (ECR)"
+    TOTAL_MISMATCH: "Расхождение итогов/сверка/итоги не бьются"
+    REBOOT_LOOP: "Циклические перезагрузки/рестарты"
+    ACCESS_ISSUE: "Доступ/права/видимость заявки"
+
+problem_rules:
+  - id: NO_LINK_TO_ECR
+    enabled: true
+    code: NO_LINK_TO_ECR
+    priority: 100
+    weight: 0.65
+    include_any:
+      - "(?i)асутп\\s+не\\s+видит\\s+терминал"
+      - "(?i)терминал\\s+не\\s+реагирует"
+      - "(?i)ошибка\\s+на\\s+кассе"
+      - "(?i)нет\\s+связи\\s+с\\s+касс(ой|ой\\b)"
+    exclude_any:
+      - "(?i)связал(ись|ся)"
+      - "(?i)связь\\s+восстанов"
+    hint_symptom: "проблема связи с кассой"
+
+  - id: TOTAL_MISMATCH
+    enabled: true
+    code: TOTAL_MISMATCH
+    priority: 90
+    weight: 0.65
+    include_any:
+      - "(?i)расхожд"
+      - "(?i)итоги\\s+не\\s+бьются"
+      - "(?i)не\\s+сход"
+      - "(?i)сверк"
+      - "(?i)итогов(ые|ая)"
+    exclude_any: []
+    hint_symptom: "расхождение итогов / сверка"
+
+  - id: REBOOT_LOOP
+    enabled: true
+    code: REBOOT_LOOP
+    priority: 90
+    weight: 0.65
+    include_any:
+      - "(?i)перезагруз"
+      - "(?i)перегруз"
+      - "(?i)рестарт"
+      - "(?i)reboot"
+      - "(?i)циклич"
+    exclude_any:
+      - "(?i)перезагрузил\\s+и\\s+заработало"
+    hint_symptom: "перезагрузки / reboot loop"
+
+  - id: ACCESS_ISSUE
+    enabled: true
+    code: ACCESS_ISSUE
+    priority: 80
+    weight: 0.60
+    include_any:
+      - "(?i)не\\s+видим\\s+заявк"
+      - "(?i)не\\s+вижу\\s+заявк"
+      - "(?i)нет\\s+доступа"
+      - "(?i)нет\\s+прав"
+      - "(?i)не\\s+отображается\\s+заявк"
+    exclude_any: []
+    hint_symptom: "доступ / видимость заявки"

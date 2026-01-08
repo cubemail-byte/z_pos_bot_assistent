@@ -12,7 +12,11 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 from dotenv import load_dotenv
 
-from storage import init_db, save_message, save_message_raw  # <- ВАЖНО: локальный импорт из app/storage.py
+from app.storage import init_db, ingest_raw_and_classify
+from app.rules_engine import load_rules, classify_text
+
+RULES_DATA = load_rules()
+RULESET_VERSION = str(RULES_DATA.get("ruleset_version", "0"))
 
 def load_config(project_root: Path) -> dict:
     config_path = project_root / "config.yaml"
@@ -174,7 +178,18 @@ async def main() -> None:
                 forward_from_id = getattr(fwd_chat, "id", None)
                 forward_from_name = getattr(fwd_chat, "title", None) or getattr(fwd_chat, "username", None) or None
 
-        save_message_raw(
+        # --- классификация (best-effort) ---
+        match = None
+        if text:
+            res = classify_text(text, RULES_DATA)
+            if res:
+                match = {
+                    "code": res.code,
+                    "rule_id": res.rule_id,
+                    "weight": res.weight,
+                }
+
+        ingest_raw_and_classify(
             db_path=sqlite_path,
             m={
                 "ts_utc": ts_utc,
@@ -209,7 +224,10 @@ async def main() -> None:
 
                 "raw_json": message_to_raw_json(message),
             },
+            match=match,
+            ruleset_version=RULESET_VERSION,
         )
+
 
         log.info(
             "saved raw message chat_id=%s tg_message_id=%s alias=%s content_type=%s has_media=%s",

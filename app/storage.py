@@ -3,6 +3,7 @@ from typing import Any, Mapping
 
 from pathlib import Path
 from typing import Optional
+from entities_engine import extract_entities
 
 
 DDL = """
@@ -17,11 +18,28 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 """
 
+DDL_MESSAGE_ENTITIES = """
+CREATE TABLE IF NOT EXISTS message_entities (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  message_id INTEGER NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_value TEXT NOT NULL,
+  entity_raw TEXT,
+  confidence REAL NOT NULL DEFAULT 0.5,
+  extractor TEXT NOT NULL,
+  created_at_utc TEXT NOT NULL,
+  UNIQUE(message_id, entity_type, entity_value),
+  FOREIGN KEY(message_id) REFERENCES messages(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_message_entities_message_id ON message_entities(message_id);
+CREATE INDEX IF NOT EXISTS idx_message_entities_type_value ON message_entities(entity_type, entity_value);
+"""
+
 
 def init_db(db_path: str) -> None:
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(db_path) as con:
-        con.execute(DDL)
+        con.executescript(DDL_MESSAGE_ENTITIES)
         con.commit()
 
 
@@ -199,6 +217,29 @@ def ingest_raw_and_classify(
                     message_id,
                 ),
             )
+
+        # 3) извлекаем КЕ / реквизиты (best-effort) и пишем в message_entities
+        text = (m.get("text") or "").strip()
+        if text:
+            entities = extract_entities(text)
+            for e in entities:
+                con.execute(
+                    """
+                    INSERT OR IGNORE INTO message_entities(
+                      message_id, entity_type, entity_value, entity_raw, confidence, extractor, created_at_utc
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        message_id,
+                        e.entity_type,
+                        e.entity_value,
+                        e.entity_raw,
+                        float(e.confidence),
+                        e.extractor,
+                        m.get("ts_utc"),
+                    ),
+                )
 
         con.commit()
         return message_id

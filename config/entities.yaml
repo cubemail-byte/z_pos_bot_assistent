@@ -1,0 +1,28 @@
+version: 1
+extractor: regex:v1
+
+patterns:
+  sd_ticket:
+    - name: "sd_ticket"
+      regex: "(?i)\\b(?:sd|service\\s*desk|servicedesk|заявка|тикет)\\s*[:#№]?\\s*(\\d{6,10})\\b"
+      confidence: 0.9
+
+  azs:
+    - name: "azs_number"
+      regex: "(?i)\\b(?:азс|aзс)\\s*[:#№]?\\s*(\\d{2,6})\\b"
+      confidence: 0.8
+
+  workplace:
+    - name: "workplace"
+      regex: "(?i)\\b(?:рм|раб\\.?\\s*место|workplace)\\s*[:#№]?\\s*(\\d{1,6})\\b"
+      confidence: 0.7
+
+  terminal:
+    - name: "terminal"
+      regex: "(?i)\\b(?:терминал|pos)\\s*[:#№]?\\s*([A-Z0-9\\-]{3,20})\\b"
+      confidence: 0.7
+
+  sd_dt:
+    - name: "sd_dt_ru"
+      regex: "\\b(\\d{1,2}[\\./]\\d{1,2}[\\./]\\d{2,4})\\s*(\\d{1,2}:\\d{2}(?::\\d{2})?)\\b"
+      confidence: 0.5

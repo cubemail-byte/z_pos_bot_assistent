@@ -106,14 +106,38 @@
 
 ### `message_classification` — слой классификации
 
-Производная таблица, хранит результаты классификации сообщений (вводится постепенно).
+## Таблица: message_classification
 
-Рекомендуемая структура:
-- `message_id` (FK → `messages.id`, UNIQUE)
-- `problem_domain`, `problem_symptom`
-- `is_unclassified`, `confidence`
-- `rule_name`, `ruleset_version`
-- `created_ts_utc`
+Таблица содержит результат классификации сообщений.
+
+Назначение:
+- хранение текущего статуса классификации
+- поддержка online и offline обработки
+- отделение raw-данных от аналитики
+
+### Структура
+
+| Поле | Тип | Описание |
+|-----|----|---------|
+| id | INTEGER PK | Уникальный идентификатор |
+| message_id | INTEGER UNIQUE | Ссылка на messages.id |
+| chat_id | INTEGER | Идентификатор чата |
+| tg_message_id | INTEGER | Идентификатор сообщения в Telegram |
+| problem_domain | TEXT | Домен проблемы (v1: PROBLEM / UNCLASSIFIED) |
+| problem_symptom | TEXT | Код проблемы (например TOTAL_MISMATCH) |
+| rule_id | TEXT | Идентификатор правила |
+| confidence | REAL | Уверенность классификации |
+| ruleset_version | TEXT | Версия rules.yaml |
+| is_unclassified | INTEGER | 1 — не классифицировано |
+| classified_at_utc | TEXT | Время классификации |
+| created_at_utc | TEXT | Время создания записи |
+| updated_at_utc | TEXT | Время обновления записи |
+
+### Примечания
+- строка создаётся всегда при ingestion
+- отсутствие классификации — допустимое состояние
+- таблица допускает повторную обработку сообщений
+
 
 ---
 

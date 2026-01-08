@@ -36,10 +36,21 @@ CREATE INDEX IF NOT EXISTS idx_message_entities_type_value ON message_entities(e
 """
 
 
+def _ensure_message_column(con: sqlite3.Connection, column: str, column_type: str) -> None:
+    cur = con.execute("PRAGMA table_info(messages)")
+    cols = {row[1] for row in cur.fetchall()}
+    if not cols:
+        return
+    if column not in cols:
+        con.execute(f"ALTER TABLE messages ADD COLUMN {column} {column_type}")
+
+
 def init_db(db_path: str) -> None:
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(db_path) as con:
         con.executescript(DDL_MESSAGE_ENTITIES)
+        _ensure_message_column(con, "from_role", "TEXT")
+        _ensure_message_column(con, "reply_kind", "TEXT")
         con.commit()
 
 
@@ -51,12 +62,14 @@ def save_message(
     from_id: Optional[int],
     username: Optional[str],
     text: Optional[str],
+    from_role: Optional[str] = None,
+    reply_kind: Optional[str] = None,
 ) -> None:
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(db_path) as con:
         con.execute(
-            "INSERT INTO messages(ts_utc, chat_id, chat_type, from_id, username, text) VALUES(?,?,?,?,?,?)",
-            (ts_utc, chat_id, chat_type, from_id, username, text),
+            "INSERT INTO messages(ts_utc, chat_id, chat_type, from_id, username, text, from_role, reply_kind) VALUES(?,?,?,?,?,?,?,?)",
+            (ts_utc, chat_id, chat_type, from_id, username, text, from_role, reply_kind),
         )
         con.commit()
 
@@ -74,7 +87,8 @@ def save_message_raw(db_path: str, m: Mapping[str, Any]) -> None:
               chat_alias,
               tg_message_id, reply_to_tg_message_id,
               reply_to_from_id, reply_to_username,
-              from_display,
+              from_display, from_role,
+              reply_kind,
               forward_from_id, forward_from_name,
               content_type, has_media, service_action,
               edited_ts_utc,
@@ -107,6 +121,8 @@ def save_message_raw(db_path: str, m: Mapping[str, Any]) -> None:
                 m.get("reply_to_username"),
 
                 m.get("from_display"),
+                m.get("from_role"),
+                m.get("reply_kind"),
 
                 m.get("forward_from_id"),
                 m.get("forward_from_name"),
@@ -141,7 +157,8 @@ def ingest_raw_and_classify(
               chat_alias,
               tg_message_id, reply_to_tg_message_id,
               reply_to_from_id, reply_to_username,
-              from_display,
+              from_display, from_role,
+              reply_kind,
               forward_from_id, forward_from_name,
               content_type, has_media, service_action,
               edited_ts_utc,
@@ -170,6 +187,8 @@ def ingest_raw_and_classify(
                 m.get("reply_to_from_id"),
                 m.get("reply_to_username"),
                 m.get("from_display"),
+                m.get("from_role"),
+                m.get("reply_kind"),
                 m.get("forward_from_id"),
                 m.get("forward_from_name"),
                 m.get("content_type"),

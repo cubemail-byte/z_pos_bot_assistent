@@ -42,6 +42,7 @@
 | `from_id` | INTEGER | Telegram user_id автора |
 | `username` | TEXT | Telegram username |
 | `from_display` | TEXT | Отображаемое имя (first + last) |
+| `from_role` | TEXT | Роль пользователя (по справочнику `config.yaml`/`users`) |
 
 > В личных чатах Telegram норма: `from_id == chat_id`.
 
@@ -63,6 +64,7 @@
 | `reply_to_tg_message_id` | INTEGER | Telegram ID сообщения, на которое был ответ |
 | `reply_to_from_id` | INTEGER | user_id автора исходного сообщения |
 | `reply_to_username` | TEXT | username автора исходного сообщения |
+| `reply_kind` | TEXT | Тип reply: `response` (банк/сервис), `escalation` (клиент), `NULL` если не reply |
 
 Используется для:
 - анализа реакции,

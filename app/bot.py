@@ -17,10 +17,27 @@ from rules_engine import load_rules, classify_text
 
 RULES_DATA = load_rules()
 RULESET_VERSION = str(RULES_DATA.get("ruleset_version", "0"))
+RESPONSE_ROLES = {"bank", "service_coordinator", "service_support"}
 
 def load_config(project_root: Path) -> dict:
     config_path = project_root / "config.yaml"
     return yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+
+
+def build_user_role_index(cfg: dict) -> dict[int, str]:
+    roles: dict[int, str] = {}
+    for item in cfg.get("users", []) or []:
+        if not isinstance(item, dict):
+            continue
+        user_id = item.get("user_id")
+        role = item.get("role")
+        try:
+            uid = int(user_id)
+        except (TypeError, ValueError):
+            continue
+        if role:
+            roles[uid] = str(role)
+    return roles
 
 def chat_alias_for(chat_id: int, cfg: dict) -> str | None:
     for c in cfg.get("chats", []):
@@ -50,6 +67,7 @@ async def main() -> None:
 
     project_root = Path(__file__).resolve().parent.parent  # .../app/bot.py -> .../
     cfg = load_config(project_root)
+    user_roles = build_user_role_index(cfg)
 
     sqlite_path_cfg = cfg.get("storage", {}).get("sqlite_path", "data/agent.db")
     sqlite_path = Path(sqlite_path_cfg)
@@ -91,6 +109,7 @@ async def main() -> None:
 
         from_id = message.from_user.id if message.from_user else None
         username = message.from_user.username if message.from_user else None
+        from_role = user_roles.get(from_id) if from_id is not None else None
 
         from_display = None
         if message.from_user:
@@ -109,6 +128,13 @@ async def main() -> None:
         if message.reply_to_message and message.reply_to_message.from_user:
             reply_to_from_id = message.reply_to_message.from_user.id
             reply_to_username = message.reply_to_message.from_user.username
+
+        reply_kind = None
+        if reply_to_tg_message_id is not None:
+            if from_role == "client":
+                reply_kind = "escalation"
+            elif from_role in RESPONSE_ROLES:
+                reply_kind = "response"
 
 
         # --- NEW: text может быть в caption (фото/док с подписью) ---
@@ -200,6 +226,7 @@ async def main() -> None:
                 "from_id": from_id,
                 "username": username,
                 "from_display": from_display,
+                "from_role": from_role,
 
                 "text": text,
 
@@ -208,6 +235,7 @@ async def main() -> None:
 
                 "reply_to_from_id": reply_to_from_id,
                 "reply_to_username": reply_to_username,
+                "reply_kind": reply_kind,
 
                 "content_type": content_type,
                 "has_media": has_media,

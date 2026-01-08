@@ -1,4 +1,4 @@
-﻿app:
+app:
   name: tg-agent
   log_level: INFO
 
@@ -10,7 +10,22 @@ bot:
   reply_in_groups: false
 
 chats:
-  - chat_id: -5275351843        
-    alias: tatneft_escalation
+  - chat_id: -1001802670428      
+    alias: tatneft_zapad_escalation
   - chat_id: -1234567890
     alias: second_escalation
+  - chat_id: -5275351843
+    alias: test_group_chat
+
+users:
+  - user_id: 309881753
+    role: service_coordinator
+    name: 'Роберт П.'
+
+  - user_id: 122976389
+    role: bank
+    name: 'Капитонов Денис'
+
+  - user_id: 5797216921
+    role: client
+    name: 'Руслан Уцумиев'

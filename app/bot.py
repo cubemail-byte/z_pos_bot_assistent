@@ -12,8 +12,8 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 from dotenv import load_dotenv
 
-from app.storage import init_db, ingest_raw_and_classify
-from app.rules_engine import load_rules, classify_text
+from storage import init_db, ingest_raw_and_classify
+from rules_engine import load_rules, classify_text
 
 RULES_DATA = load_rules()
 RULESET_VERSION = str(RULES_DATA.get("ruleset_version", "0"))

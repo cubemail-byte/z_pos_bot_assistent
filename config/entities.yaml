@@ -3,19 +3,19 @@ extractor: regex:v1
 
 patterns:
   sd_ticket:
-    - name: "sd_ticket"
-      regex: "(?i)\\b(?:sd|service\\s*desk|servicedesk|заявка|тикет)\\s*[:#№]?\\s*(\\d{6,10})\\b"
-      confidence: 0.9
+    - name: "sd_ticket_7digits"
+      regex: "(?i)\\b(?:sd|service\\s*desk|servicedesk|заявка|тикет)\\s*[:#№]?\\s*(\\d{7})\\b"
+      confidence: 0.95
 
   azs:
-    - name: "azs_number"
-      regex: "(?i)\\b(?:азс|aзс)\\s*[:#№]?\\s*(\\d{2,6})\\b"
-      confidence: 0.8
+    - name: "azs_2to4_digits"
+      regex: "(?i)\\b(?:азс|aзс)\\s*[:#№]?\\s*(\\d{2,4})\\b"
+      confidence: 0.85
 
   workplace:
-    - name: "workplace"
-      regex: "(?i)\\b(?:рм|раб\\.?\\s*место|workplace)\\s*[:#№]?\\s*(\\d{1,6})\\b"
-      confidence: 0.7
+    - name: "workplace_1to2_digits"
+      regex: "(?i)\\b(?:рм|раб\\.?\\s*место|workplace)\\s*[:#№]?\\s*(\\d{1,2})\\b"
+      confidence: 0.8
 
   terminal:
     - name: "terminal"

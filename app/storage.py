@@ -100,6 +100,7 @@ def save_message_raw(db_path: str, m: Mapping[str, Any]) -> None:
                     ?, ?,
                     ?,
                     ?, ?,
+                    ?, ?,
                     ?, ?, ?,
                     ?,
                     ?)
@@ -169,6 +170,7 @@ def ingest_raw_and_classify(
                     ?, ?,
                     ?, ?,
                     ?,
+                    ?, ?,
                     ?, ?,
                     ?, ?, ?,
                     ?,

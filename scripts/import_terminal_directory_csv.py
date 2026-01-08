@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import os
 import re
 import sqlite3
 from datetime import datetime, timezone
@@ -19,7 +18,10 @@ def norm_digits(s: str) -> str:
 
 
 def pick_tid(val_raw: str) -> str:
-    """Из Val может прилететь что угодно; вынимаем первое 8-значное число."""
+    """
+    Из Val может прилететь одно число или несколько.
+    Берём ПЕРВОЕ 8-значное. (Если нужно — поменяем на "последнее".)
+    """
     if not val_raw:
         return ""
     m = TID_RE.search(str(val_raw))
@@ -30,7 +32,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--db", default="data/agent.db")
     ap.add_argument("--csv", required=True)
-    ap.add_argument("--encoding", default="utf-8-sig")  # важно: BOM в колонке AZS
+    ap.add_argument("--encoding", default="utf-8-sig")  # BOM-friendly
+    ap.add_argument("--delimiter", default=";", help="CSV delimiter: ';' or ',' or 'auto'")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
@@ -40,9 +43,19 @@ def main():
 
     imported_at_utc = datetime.now(timezone.utc).isoformat()
 
+    # delimiter detection
+    delimiter = args.delimiter
+    if delimiter == "auto":
+        with open(csv_path, "r", encoding=args.encoding, newline="") as f:
+            sample = f.read(4096)
+        delimiter = csv.Sniffer().sniff(sample).delimiter
+
     rows = []
     with open(csv_path, "r", encoding=args.encoding, newline="") as f:
-        reader = csv.DictReader(f)
+        reader = csv.DictReader(f, delimiter=delimiter)
+        if not reader.fieldnames:
+            raise SystemExit("CSV has no header / fieldnames")
+
         for r in reader:
             azs = norm_digits(r.get("AZS") or r.get("﻿AZS") or "")
             arm = (r.get("ARM") or "").strip()
@@ -53,7 +66,7 @@ def main():
 
             tid = pick_tid(val_raw)
 
-            # строгость форматов (как ты хочешь)
+            # строгость форматов
             if not re.fullmatch(r"\d{2,4}", azs):
                 continue
             if not re.fullmatch(r"\d{1,2}", plnum):
@@ -62,7 +75,6 @@ def main():
                 continue
 
             if not arm:
-                # если тип пустой - оставим как "UNKNOWN", чтобы ключ работал
                 arm = "UNKNOWN"
 
             rows.append((azs, arm, plnum, ip, tid, val_raw, src_ts))
@@ -75,8 +87,6 @@ def main():
     con = sqlite3.connect(args.db)
     try:
         con.execute("BEGIN")
-
-        # ВАЖНО: делаем UPSERT по (azs, arm, plnum)
         con.executemany(
             """
             INSERT INTO terminal_directory(
@@ -98,7 +108,6 @@ def main():
                 for (azs, arm, plnum, ip, tid, val_raw, src_ts) in rows
             ],
         )
-
         con.commit()
         print("Import done.")
     except Exception:

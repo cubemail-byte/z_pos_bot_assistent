@@ -16,6 +16,8 @@ from storage import init_db, ingest_raw_and_classify
 from rules_engine import load_rules, classify_text
 
 from storage import init_db, ingest_raw_and_classify, get_message_entities
+from storage import get_message_entities_multi, lookup_terminal_directory_by_azs_wp
+
 
 
 RULES_DATA = load_rules()
@@ -92,6 +94,53 @@ def build_reply_text(cfg: dict, entities: dict[str, str]) -> str:
 
     return "\n".join(parts).strip()
 
+def build_reply_text_multi(cfg: dict, sqlite_path: str, entities: dict[str, list[str]]) -> str:
+    reply_cfg = cfg.get("reply") or {}
+    include = set(reply_cfg.get("include_entities") or [])
+
+    azs = (entities.get("azs") or [None])[0]
+    wps = sorted({w for w in (entities.get("workplace") or []) if w})
+
+    if not azs or not wps:
+        return ""
+
+    lines = []
+    # Заголовок KE
+    if "azs" in include and "workplace" in include:
+        lines.append(f"KE: АЗС {azs}, РМ " + ",".join(wps))
+    else:
+        # на всякий случай
+        lines.append(f"KE: АЗС {azs}")
+
+    found_any_tid = False
+
+    # По каждому РМ — lookup в справочнике, чтобы корректно сопоставить tid/ip
+    for wp in wps:
+        rows = lookup_terminal_directory_by_azs_wp(sqlite_path, azs, wp)
+
+        # require_unique_match по-хорошему должен быть и тут, но пока: если 1 строка — ок, иначе пропускаем
+        if len(rows) != 1:
+            continue
+
+        tid, ip, arm = rows[0]
+        if tid:
+            found_any_tid = True
+
+        parts = [f"РМ {wp}:"]
+        if "tid" in include and tid:
+            parts.append(f"TID {tid}")
+        if "ip" in include and ip:
+            parts.append(f"IP {ip}")
+
+        # если по этому РМ вообще нечего показывать — пропускаем строку
+        if len(parts) > 1:
+            lines.append(" ".join(parts))
+
+    # ВАЖНО: если нет TID ни для одного РМ — не отвечаем вообще
+    if not found_any_tid:
+        return ""
+
+    return "\n".join(lines).strip()
 
 async def main() -> None:
     load_dotenv()
@@ -318,7 +367,7 @@ async def main() -> None:
                 reply_cfg = cfg.get("reply") or {}
                 mode = str(reply_cfg.get("mode", "engineer_chat"))
 
-                entities = get_message_entities(sqlite_path, message_id)
+                entities = get_message_entities_multi(sqlite_path, message_id)
 
                 required = set((cfg.get("reply") or {}).get("require_entities") or [])
                 if required:
@@ -327,7 +376,7 @@ async def main() -> None:
                         log.info("reply_skipped_missing_entities missing=%s entities=%s", missing, entities)
                         return            
                 
-                reply_text = build_reply_text(cfg, entities)
+                reply_text = build_reply_text_multi(cfg, sqlite_path, entities)
 
                 log.info("reply_ready mode=%s reply_text_len=%s entities=%s", mode, len(reply_text or ""), entities)
 

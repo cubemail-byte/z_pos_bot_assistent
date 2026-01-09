@@ -177,6 +177,29 @@ def lookup_terminal_directory(con: sqlite3.Connection, azs: str, plnum: str):
         (azs, plnum),
     ).fetchall()
 
+def get_message_entities_multi(db_path: str, message_id: int) -> dict[str, list[str]]:
+    with sqlite3.connect(db_path) as con:
+        rows = con.execute(
+            "SELECT entity_type, entity_value FROM message_entities WHERE message_id=?",
+            (message_id,),
+        ).fetchall()
+
+    d: dict[str, list[str]] = {}
+    for t, v in rows:
+        d.setdefault(str(t), []).append(str(v))
+    return d
+
+
+def lookup_terminal_directory_by_azs_wp(db_path: str, azs: str, plnum: str):
+    with sqlite3.connect(db_path) as con:
+        return con.execute(
+            """
+            SELECT tid, ip, arm
+            FROM terminal_directory
+            WHERE azs = ? AND plnum = ?
+            """,
+            (azs, plnum),
+        ).fetchall()
 
 def ingest_raw_and_classify(
     db_path: str,

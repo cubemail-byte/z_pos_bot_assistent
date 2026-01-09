@@ -44,6 +44,7 @@ def build_user_role_index(cfg: dict) -> dict[int, str]:
             roles[uid] = str(role)
     return roles
 
+
 def chat_alias_for(chat_id: int, cfg: dict) -> str | None:
     for c in cfg.get("chats", []):
         try:
@@ -52,6 +53,7 @@ def chat_alias_for(chat_id: int, cfg: dict) -> str | None:
         except Exception:
             continue
     return None
+
 
 def message_to_raw_json(message: Message) -> str:
     try:
@@ -63,14 +65,10 @@ def message_to_raw_json(message: Message) -> str:
             data = {"repr": repr(message)}
     return json.dumps(data, ensure_ascii=False)
 
-def should_send_reply(cfg: dict, from_role: str | None) -> bool:
+
+def should_send_reply(cfg: dict) -> bool:
     reply_cfg = cfg.get("reply") or {}
-    if not reply_cfg.get("enabled", False):
-        return False
-    allowed = reply_cfg.get("allowed_roles") or []
-    if not allowed:
-        return False
-    return (from_role in allowed)
+    return bool(reply_cfg.get("enabled", False))
 
 
 def build_reply_text(cfg: dict, entities: dict[str, str]) -> str:
@@ -362,7 +360,7 @@ async def main() -> None:
             reply_in_groups,
         )
 
-        if should_send_reply(cfg, from_role):
+        if should_send_reply(cfg):
             try:
                 reply_cfg = cfg.get("reply") or {}
                 mode = str(reply_cfg.get("mode", "engineer_chat"))

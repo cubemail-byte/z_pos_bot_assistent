@@ -38,6 +38,9 @@ reply:
   mode: reply                    # engineer_chat | reply
   engineer_chat_id: null         # если mode=engineer_chat — сюда шлём (chat_id)
 
+  require_entities:
+    - tid            # без TID не отвечаем
+
   allowed_roles:                 # роли, которые могут триггерить ответ бота
     - bank
     - service_coordinator

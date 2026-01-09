@@ -319,6 +319,14 @@ async def main() -> None:
                 mode = str(reply_cfg.get("mode", "engineer_chat"))
 
                 entities = get_message_entities(sqlite_path, message_id)
+
+                required = set((cfg.get("reply") or {}).get("require_entities") or [])
+                if required:
+                    missing = [k for k in required if not entities.get(k)]
+                    if missing:
+                        log.info("reply_skipped_missing_entities missing=%s entities=%s", missing, entities)
+                        return            
+                
                 reply_text = build_reply_text(cfg, entities)
 
                 log.info("reply_ready mode=%s reply_text_len=%s entities=%s", mode, len(reply_text or ""), entities)

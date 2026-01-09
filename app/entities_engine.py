@@ -9,6 +9,20 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
+ORDINAL_RU_TO_INT = {
+    "перв": "1",
+    "втор": "2",
+    "трет": "3",
+    "четверт": "4",
+    "пят": "5",
+    "шест": "6",
+    "седьм": "7",
+    "восьм": "8",
+    "девят": "9",
+    "десят": "10",
+}
+
+
 # Project root = parent of /app
 BASE_DIR = Path(__file__).resolve().parent.parent
 ENTITIES_PATH = BASE_DIR / "config" / "entities.yaml"
@@ -109,22 +123,42 @@ def extract_entities(text: str, data: Optional[Dict[str, Any]] = None) -> List[E
 
                     # Особый случай: workplace может быть списком "1,2,3"
                     if entity_type == "workplace":
-                        # вытаскиваем все 1-2 значные числа из захваченного фрагмента
-                        nums = re.findall(r"\b\d{1,2}\b", str(val))
+                        s = str(val)
+
+                        # 1) список/цифры
+                        nums = re.findall(r"\b\d{1,2}\b", s)
                         if nums:
                             for n in nums:
                                 norm = _normalize(entity_type, n)
                                 if norm:
-                                    found.append(
-                                        EntityMatch(
-                                            entity_type=entity_type,
-                                            entity_value=norm,
-                                            entity_raw=raw,
-                                            confidence=confidence,
-                                            extractor=f"{extractor_version}:{name}",
-                                        )
-                                    )
-                            continue  # важное: не падаем в общий путь
+                                    found.append(EntityMatch(
+                                        entity_type=entity_type,
+                                        entity_value=norm,
+                                        entity_raw=raw,
+                                        confidence=confidence,
+                                        extractor=f"{extractor_version}:{name}",
+                                    ))
+                            continue
+
+                        # 2) порядковые слова -> цифры
+                        low = s.lower()
+                        mapped = None
+                        for k, v in ORDINAL_RU_TO_INT.items():
+                            if k in low:
+                                mapped = v
+                                break
+                        if mapped:
+                            norm = _normalize(entity_type, mapped)
+                            if norm:
+                                found.append(EntityMatch(
+                                    entity_type=entity_type,
+                                    entity_value=norm,
+                                    entity_raw=raw,
+                                    confidence=confidence,
+                                    extractor=f"{extractor_version}:{name}",
+                                ))
+                            continue
+ # важное: не падаем в общий путь
 
                     norm = _normalize(entity_type, val)
                     if not norm:

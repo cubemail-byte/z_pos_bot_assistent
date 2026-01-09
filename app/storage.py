@@ -38,8 +38,10 @@ CREATE INDEX IF NOT EXISTS idx_message_entities_message_id ON message_entities(m
 CREATE INDEX IF NOT EXISTS idx_message_entities_type_value ON message_entities(entity_type, entity_value);
 """
 
-BASE_DIR = Path(__file__).resolve().parent
+# Project root = parent of /app
+BASE_DIR = Path(__file__).resolve().parent.parent
 ENRICHMENT_CFG_PATH = BASE_DIR / "config" / "enrichment.yaml"
+
 
 @lru_cache(maxsize=1)
 def get_enrichment_cfg() -> dict:

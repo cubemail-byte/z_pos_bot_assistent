@@ -12,4 +12,13 @@ On VPS (root):
 - `sqlite3 /opt/tg-agent/data/agent.db "select count(*) from messages;"`
 - `sqlite3 /opt/tg-agent/data/agent.db "select id, ts_utc, chat_id, chat_type, username, substr(text,1,60) from messages order by id desc limit 20;"`
 
+---
 
+## Проверка enrichment (TID / IP)
+
+```bash
+sqlite3 /opt/tg-agent/data/agent.db "
+select entity_type, entity_value, extractor
+from message_entities
+where message_id=(select max(id) from messages)
+order by entity_type;"

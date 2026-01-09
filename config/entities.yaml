@@ -1,6 +1,20 @@
 version: 1
 extractor: regex:v1
 
+# Справочник типов сущностей (для самодокументации и будущей валидации)
+entity_types:
+  # из текста (regex)
+  - azs
+  - workplace
+  - sd_ticket
+  - terminal
+  - sd_dt
+
+  # из справочника terminal_directory (enrichment)
+  - tid              # terminal_id банка (строго 8 цифр)
+  - ip               # ip рабочего места (IPv4 строкой)
+  - serial_number    # серийный номер терминала (пока не заполняем)
+
 patterns:
   sd_ticket:
     - name: "sd_ticket_7digits"

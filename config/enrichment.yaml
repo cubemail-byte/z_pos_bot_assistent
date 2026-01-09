@@ -1,0 +1,12 @@
+# YAML-конфиг порога неоднозначности для справочника РМ - TID
+
+version: 1
+
+terminal_directory:
+  enabled: true
+  require_unique_match: true    # если по azs+plnum найдено >1 строк — не обогащаем
+  write_ip: true                # писать ip как entity_type=ip
+  write_tid: true               # писать tid как entity_type=tid
+  confidence:
+    tid: 0.95
+    ip: 0.8

@@ -31,6 +31,26 @@ patterns:
       regex: "(?i)\\b(?:рм|раб\\.?\\s*место|workplace)\\s*[:#№]?\\s*(\\d{1,2})\\b"
       confidence: 0.8
 
+    # Новые форматы: "касса 3", "на кассе №3", "касса#3"
+    - name: "cashdesk_1to2_digits"
+      regex: "(?i)\\bкасс[аеи]\\s*[:#№]?\\s*(\\d{1,2})\\b"
+      confidence: 0.75
+
+    # "К-3", "К3", "К №3" (осторожно: коротко, но полезно в полях)
+    - name: "kassa_short_k_1to2_digits"
+      regex: "(?i)\\bк\\s*[-#№]?\\s*(\\d{1,2})\\b"
+      confidence: 0.6
+
+    # "пост 2", "пост№2"
+    - name: "post_1to2_digits"
+      regex: "(?i)\\bпост\\s*[:#№]?\\s*(\\d{1,2})\\b"
+      confidence: 0.65
+
+    # "место 1", "рабочее место 1" (кроме уже имеющегося "раб. место")
+    - name: "place_1to2_digits"
+      regex: "(?i)\\bместо\\s*[:#№]?\\s*(\\d{1,2})\\b"
+      confidence: 0.6
+
   terminal:
     - name: "terminal"
       regex: "(?i)\\b(?:терминал|pos)\\s*[:#№]?\\s*([A-Z0-9\\-]{3,20})\\b"

@@ -29,3 +29,23 @@ users:
   - user_id: 5797216921
     role: client
     name: 'Руслан Уцумиев'
+
+
+# управление ответами (репликами с уточняющей информацией по направленным эскалациям)
+
+reply:
+  enabled: true                  # главный рубильник: отвечать/не отвечать
+  mode: reply                    # engineer_chat | reply
+  engineer_chat_id: null         # если mode=engineer_chat — сюда шлём (chat_id)
+
+  allowed_roles:                 # роли, которые могут триггерить ответ бота
+    - bank
+    - service_coordinator
+    - service_support
+    - client
+
+  include_entities:              # что выводить инженерам
+    - azs
+    - workplace
+    - tid
+    - ip

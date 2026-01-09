@@ -89,6 +89,18 @@ def save_message(
         )
         con.commit()
 
+def get_message_entities(db_path: str, message_id: int) -> dict[str, str]:
+    with sqlite3.connect(db_path) as con:
+        rows = con.execute(
+            "SELECT entity_type, entity_value FROM message_entities WHERE message_id=?",
+            (message_id,),
+        ).fetchall()
+    # если вдруг несколько — берём первое; позже можем усилить
+    d: dict[str, str] = {}
+    for t, v in rows:
+        d.setdefault(str(t), str(v))
+    return d
+
 def save_message_raw(db_path: str, m: Mapping[str, Any]) -> None:
     """
     Сохраняет raw-сообщение в messages, заполняя расширенные колонки.

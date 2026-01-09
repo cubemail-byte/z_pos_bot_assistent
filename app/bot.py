@@ -15,6 +15,9 @@ from dotenv import load_dotenv
 from storage import init_db, ingest_raw_and_classify
 from rules_engine import load_rules, classify_text
 
+from storage import init_db, ingest_raw_and_classify, get_message_entities
+
+
 RULES_DATA = load_rules()
 RULESET_VERSION = str(RULES_DATA.get("ruleset_version", "0"))
 RESPONSE_ROLES = {"bank", "service_coordinator", "service_support"}
@@ -57,6 +60,37 @@ def message_to_raw_json(message: Message) -> str:
         except Exception:
             data = {"repr": repr(message)}
     return json.dumps(data, ensure_ascii=False)
+
+def should_send_reply(cfg: dict, from_role: str | None) -> bool:
+    reply_cfg = cfg.get("reply") or {}
+    if not reply_cfg.get("enabled", False):
+        return False
+    allowed = reply_cfg.get("allowed_roles") or []
+    if not allowed:
+        return False
+    return (from_role in allowed)
+
+
+def build_reply_text(cfg: dict, entities: dict[str, str]) -> str:
+    reply_cfg = cfg.get("reply") or {}
+    include = set(reply_cfg.get("include_entities") or [])
+
+    parts = []
+    # KE
+    ke = []
+    if "azs" in include and entities.get("azs"):
+        ke.append(f"АЗС {entities['azs']}")
+    if "workplace" in include and entities.get("workplace"):
+        ke.append(f"РМ {entities['workplace']}")
+    if ke:
+        parts.append("KE: " + ", ".join(ke))
+
+    if "tid" in include and entities.get("tid"):
+        parts.append(f"TID: {entities['tid']}")
+    if "ip" in include and entities.get("ip"):
+        parts.append(f"IP: {entities['ip']}")
+
+    return "\n".join(parts).strip()
 
 
 async def main() -> None:
@@ -215,7 +249,7 @@ async def main() -> None:
                     "weight": res.weight,
                 }
 
-        ingest_raw_and_classify(
+        message_id = ingest_raw_and_classify(
             db_path=sqlite_path,
             m={
                 "ts_utc": ts_utc,
@@ -265,6 +299,24 @@ async def main() -> None:
             content_type,
             has_media,
         )
+
+        # --- reply / notify (управляется config.yaml, по ролям) ---
+        if should_send_reply(cfg, from_role):
+            reply_cfg = cfg.get("reply") or {}
+            mode = str(reply_cfg.get("mode", "engineer_chat"))
+
+            entities = get_message_entities(sqlite_path, message_id)
+            reply_text = build_reply_text(cfg, entities)
+
+            if reply_text:
+                if mode == "engineer_chat":
+                    engineer_chat_id = reply_cfg.get("engineer_chat_id")
+                    if engineer_chat_id:
+                        await bot.send_message(int(engineer_chat_id), reply_text)
+                elif mode == "reply":
+                    # ВАЖНО: это ответ в тот же чат (увидит клиент)
+                    # Если хочешь ограничить только группами/только личкой — добавим отдельный флаг.
+                    await message.reply(reply_text)
 
         # тихий режим в группах
         if message.chat.type in ("group", "supergroup") and not reply_in_groups:

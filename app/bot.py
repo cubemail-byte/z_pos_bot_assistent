@@ -301,22 +301,37 @@ async def main() -> None:
         )
 
         # --- reply / notify (управляется config.yaml, по ролям) ---
+
+        reply_cfg = cfg.get("reply") or {}
+        log.info(
+            "reply_check enabled=%s mode=%s allowed_roles=%s from_id=%s from_role=%s reply_in_groups=%s",
+            reply_cfg.get("enabled", None),
+            reply_cfg.get("mode", None),
+            reply_cfg.get("allowed_roles", None),
+            from_id,
+            from_role,
+            reply_in_groups,
+        )
+
         if should_send_reply(cfg, from_role):
-            reply_cfg = cfg.get("reply") or {}
-            mode = str(reply_cfg.get("mode", "engineer_chat"))
+            try:
+                reply_cfg = cfg.get("reply") or {}
+                mode = str(reply_cfg.get("mode", "engineer_chat"))
 
-            entities = get_message_entities(sqlite_path, message_id)
-            reply_text = build_reply_text(cfg, entities)
+                entities = get_message_entities(sqlite_path, message_id)
+                reply_text = build_reply_text(cfg, entities)
 
-            if reply_text:
-                if mode == "engineer_chat":
-                    engineer_chat_id = reply_cfg.get("engineer_chat_id")
-                    if engineer_chat_id:
-                        await bot.send_message(int(engineer_chat_id), reply_text)
-                elif mode == "reply":
-                    # ВАЖНО: это ответ в тот же чат (увидит клиент)
-                    # Если хочешь ограничить только группами/только личкой — добавим отдельный флаг.
-                    await message.reply(reply_text)
+                log.info("reply_ready mode=%s reply_text_len=%s entities=%s", mode, len(reply_text or ""), entities)
+
+                if reply_text:
+                    if mode == "engineer_chat":
+                        engineer_chat_id = reply_cfg.get("engineer_chat_id")
+                        if engineer_chat_id:
+                            await bot.send_message(int(engineer_chat_id), reply_text)
+                    elif mode == "reply":
+                        await message.reply(reply_text)
+            except Exception:
+                log.exception("reply_failed")
 
         # тихий режим в группах
         if message.chat.type in ("group", "supergroup") and not reply_in_groups:

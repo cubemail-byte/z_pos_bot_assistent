@@ -107,6 +107,25 @@ def extract_entities(text: str, data: Optional[Dict[str, Any]] = None) -> List[E
                     raw = m.group(0)
                     val = m.group(1) if m.lastindex and m.lastindex >= 1 else raw
 
+                    # Особый случай: workplace может быть списком "1,2,3"
+                    if entity_type == "workplace":
+                        # вытаскиваем все 1-2 значные числа из захваченного фрагмента
+                        nums = re.findall(r"\b\d{1,2}\b", str(val))
+                        if nums:
+                            for n in nums:
+                                norm = _normalize(entity_type, n)
+                                if norm:
+                                    found.append(
+                                        EntityMatch(
+                                            entity_type=entity_type,
+                                            entity_value=norm,
+                                            entity_raw=raw,
+                                            confidence=confidence,
+                                            extractor=f"{extractor_version}:{name}",
+                                        )
+                                    )
+                            continue  # важное: не падаем в общий путь
+
                     norm = _normalize(entity_type, val)
                     if not norm:
                         continue
@@ -120,6 +139,7 @@ def extract_entities(text: str, data: Optional[Dict[str, Any]] = None) -> List[E
                             extractor=f"{extractor_version}:{name}",
                         )
                     )
+
             except re.error:
                 # битый regex -> просто пропускаем
                 continue

@@ -51,6 +51,10 @@ patterns:
       regex: "(?i)\\bместо\\s*[:#№]?\\s*(\\d{1,2})\\b"
       confidence: 0.6
 
+    - name: "workplaces_list"
+      regex: "(?i)\\bрабоч(?:ем|их)\\s+мест(?:е|ах)\\b[^\\d#№]*(?:[#№]\\s*)?(\\d{1,2}(?:\\s*[,;/]\\s*\\d{1,2})+)"
+      confidence: 0.8
+
   terminal:
     - name: "terminal"
       regex: "(?i)\\b(?:терминал|pos)\\s*[:#№]?\\s*([A-Z0-9\\-]{3,20})\\b"

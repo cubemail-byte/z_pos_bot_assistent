@@ -322,37 +322,37 @@ def ingest_raw_and_classify(
             ).fetchall()
 
             azs_val = next((v for (t, v) in ent if t == "azs"), None)
-            wp_val = next((v for (t, v) in ent if t == "workplace"), None)
+            wp_vals = sorted({v for (t, v) in ent if t == "workplace"})
 
-            if azs_val and wp_val:
-                rows = lookup_terminal_directory(con, azs_val, wp_val)
+            if azs_val and wp_vals:
+                for wp_val in wp_vals:
+                    rows = lookup_terminal_directory(con, azs_val, wp_val)
 
-                if (not require_unique) or (len(rows) == 1):
-                    # если require_unique=false и строк несколько — берём первую (не рекомендуется)
-                    if rows:
-                        tid, ip, arm = rows[0]
+                    if (not require_unique) or (len(rows) == 1):
+                        if rows:
+                            tid, ip, arm = rows[0]
 
-                        if write_tid and tid:
-                            con.execute(
-                                """
-                                INSERT OR IGNORE INTO message_entities(
-                                  message_id, entity_type, entity_value, entity_raw, confidence, extractor, created_at_utc
+                            if write_tid and tid:
+                                con.execute(
+                                    """
+                                    INSERT OR IGNORE INTO message_entities(
+                                    message_id, entity_type, entity_value, entity_raw, confidence, extractor, created_at_utc
+                                    )
+                                    VALUES (?, 'tid', ?, NULL, ?, 'directory:v1', ?)
+                                    """,
+                                    (message_id, str(tid), tid_conf, m.get("ts_utc")),
                                 )
-                                VALUES (?, 'tid', ?, NULL, ?, 'directory:v1', ?)
-                                """,
-                                (message_id, str(tid), tid_conf, m.get("ts_utc")),
-                            )
 
-                        if write_ip and ip:
-                            con.execute(
-                                """
-                                INSERT OR IGNORE INTO message_entities(
-                                  message_id, entity_type, entity_value, entity_raw, confidence, extractor, created_at_utc
+                            if write_ip and ip:
+                                con.execute(
+                                    """
+                                    INSERT OR IGNORE INTO message_entities(
+                                    message_id, entity_type, entity_value, entity_raw, confidence, extractor, created_at_utc
+                                    )
+                                    VALUES (?, 'ip', ?, NULL, ?, 'directory:v1', ?)
+                                    """,
+                                    (message_id, str(ip), ip_conf, m.get("ts_utc")),
                                 )
-                                VALUES (?, 'ip', ?, NULL, ?, 'directory:v1', ?)
-                                """,
-                                (message_id, str(ip), ip_conf, m.get("ts_utc")),
-                            )
 
         con.commit()
         return message_id

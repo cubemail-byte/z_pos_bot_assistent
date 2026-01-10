@@ -1,2 +1,2 @@
 # Dev notes
-Local Mac setup OK.
+Local Mac setup OK.˝

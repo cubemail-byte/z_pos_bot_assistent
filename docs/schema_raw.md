@@ -185,7 +185,14 @@
 ```sql
 SELECT id, ts_utc, from_display, text
 FROM messages
-WHERE chat_alias = 'tatneft_escalation'
+WHERE chat_alias = 'tatneft_zapad_escalation'
+ORDER BY id DESC
+LIMIT 50;
+
+
+SELECT id, ts_utc, from_display, from_id text
+FROM messages
+WHERE chat_alias = 'tatneft_zapad_escalation'
 ORDER BY id DESC
 LIMIT 50;
 ```

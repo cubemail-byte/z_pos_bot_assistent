@@ -22,9 +22,17 @@ users:
     role: service_coordinator
     name: 'Роберт П.'
 
+  - user_id: 267641633
+    role: service_coordinator
+    name: 'Федотов Игорь'
+
   - user_id: 122976389
     role: bank
     name: 'Капитонов Денис'
+
+  - user_id: 461613427
+    role: bank
+    name: 'Кауров Олег'
 
   - user_id: 5130919462
     role: bank
